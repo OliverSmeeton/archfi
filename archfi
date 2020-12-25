@@ -598,12 +598,15 @@ formatdevice(){
 			mkfs.btrfs -f ${2}
 			if [ "${1}" = "root" ]; then
 				echo "mount ${2} /mnt"
-				echo "btrfs subvolume create /mnt/root"
-				echo "btrfs subvolume set-default /mnt/root"
+				echo "btrfs subvolume create /mnt/Arch"
+				echo "btrfs subvolume create /mnt/Arch/root"
+				echo "btrfs subvolume create /mnt/Arch/home"
 				echo "umount /mnt"
+				btrfs=true
 				mount ${2} /mnt
-				btrfs subvolume create /mnt/root
-				btrfs subvolume set-default /mnt/root
+				btrfs subvolume create /mnt/Arch
+				btrfs subvolume create /mnt/Arch/root
+				btrfs subvolume create /mnt/Arch/home
 				umount /mnt
 			fi
 		;;
@@ -706,10 +709,23 @@ formatdevice(){
 
 mountparts(){
 	clear
-	echo "mount ${rootdev} /mnt"
-	mount ${rootdev} /mnt
-	echo "mkdir /mnt/{boot,home}"
-	mkdir /mnt/{boot,home} 2>/dev/null
+	if [ "${btrfs}" = true ]; then
+		echo "mount -o subvol=Arch/root ${rootdev} /mnt"
+		mount -o subvol=Arch/root ${rootdev} /mnt
+		echo "mkdir /mnt/{boot,home}"
+		mkdir /mnt/{boot,home} 2>/dev/null
+		echo "mount -o subvol=Arch/home ${rootdev} /mnt/home"
+		mount -o subvol=Arch/home ${rootdev} /mnt/home
+	else
+		echo "mount ${rootdev} /mnt"
+		mount ${rootdev} /mnt
+		echo "mkdir /mnt/{boot,home}"
+		mkdir /mnt/{boot,home} 2>/dev/null
+		if [ ! "${homedev}" = "" ]; then
+			echo "mount ${homedev} /mnt/home"
+			mount ${homedev} /mnt/home
+		fi
+	fi
 	if [ ! "${bootdev}" = "" ]; then
 		echo "mount ${bootdev} /mnt/boot"
 		mount ${bootdev} /mnt/boot
@@ -718,10 +734,7 @@ mountparts(){
 		echo "swapon ${swapdev}"
 		swapon ${swapdev}
 	fi
-	if [ ! "${homedev}" = "" ]; then
-		echo "mount ${homedev} /mnt/home"
-		mount ${homedev} /mnt/home
-	fi
+	
 	pressanykey
 	installmenu
 }
